@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Settings, Sun, Moon, MapPin, Pill, Phone, AlertTriangle, Mic, X, User, Heart, Stethoscope, Users, Eye, BookHeart } from 'lucide-react';
+import { Settings, Sun, Moon, MapPin, Pill, Phone, AlertTriangle, Mic, X, User, Eye, BookHeart } from 'lucide-react';
 import MedicineList from './components/MedicineList';
 import SettingsView from './components/SettingsView';
 import VisionView from './components/VisionView';
@@ -10,7 +10,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState('home'); // 'home', 'medicines', 'settings'
   const [dementiaMode, setDementiaMode] = useState(false);
   const [inSafeZone, setInSafeZone] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [userName, setUserName] = useState('Dadaji');
   const [currentTime, setCurrentTime] = useState(new Date());
   
@@ -48,10 +48,6 @@ export default function App() {
     setContacts([...contacts, newContact]);
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
-  };
-
   // --- EFFECTS ---
 
   useEffect(() => {
@@ -67,15 +63,16 @@ export default function App() {
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
   };
+  const greeting = getGreeting();
 
   // Dark Mode Class Application
   useEffect(() => {
-    if (darkMode) {
+    if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [darkMode]);
+  }, [isDarkMode]);
 
   // SOS Countdown Logic
   useEffect(() => {
@@ -208,7 +205,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen font-sans selection:bg-purple-200 relative pb-32 transition-colors duration-700
-        ${darkMode 
+        ${isDarkMode 
             ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900 text-gray-100' // Deep Midnight
             : 'bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 text-stone-900' // Warm Dawn
         }
@@ -251,7 +248,7 @@ export default function App() {
       {showFamily && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
             <div className={`backdrop-blur-xl border rounded-3xl shadow-2xl p-6 w-full max-w-lg relative transition-colors duration-500
-                ${darkMode 
+                ${isDarkMode 
                     ? 'bg-slate-800/90 border-slate-600' 
                     : 'bg-white/90 border-white/50'
                 }
@@ -259,7 +256,7 @@ export default function App() {
                 <button 
                     onClick={() => setShowFamily(false)}
                     className={`absolute top-4 right-4 p-2 rounded-full transition-colors
-                        ${darkMode 
+                        ${isDarkMode 
                             ? 'bg-slate-700 hover:bg-slate-600 text-gray-300' 
                             : 'bg-stone-100 hover:bg-stone-200 text-stone-500'
                         }
@@ -268,7 +265,7 @@ export default function App() {
                     <X className="w-8 h-8" />
                 </button>
                 
-                <h2 className={`text-3xl font-bold mb-8 px-2 ${darkMode ? 'text-white' : 'text-stone-800'}`}>Quick Dial</h2>
+                <h2 className={`text-3xl font-bold mb-8 px-2 ${isDarkMode ? 'text-white' : 'text-stone-800'}`}>Quick Dial</h2>
                 
                 {renderFamilyList()}
             </div>
@@ -285,52 +282,29 @@ export default function App() {
 
       {/* Header */}
       {currentView === 'home' && (
-        <header className={`p-6 backdrop-blur-md shadow-sm sticky top-0 z-10 border-b transition-colors duration-500
-            ${darkMode 
-                ? 'bg-slate-900/80 border-slate-700' 
-                : 'bg-white/80 border-white/50'
-            }
-        `}>
-            <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-extrabold text-indigo-600">
-                    SecondYouth
-                </h1>
-                <div className="flex items-center gap-6 relative">
-                    {/* Theme Toggle Button */}
-                    <button
-                        onClick={toggleDarkMode}
-                        className={`p-2 rounded-2xl transition-all active:scale-95 duration-300
-                            ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-amber-100/50'}
-                        `}
-                        aria-label={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                    >
-                        {darkMode ? (
-                            <Sun className="w-10 h-10 text-amber-400 animate-in spin-in-90 duration-500" strokeWidth={2.5} />
-                        ) : (
-                            <Moon className="w-10 h-10 text-blue-600 animate-in spin-in-90 duration-500" strokeWidth={2.5} />
-                        )}
-                    </button>
-                    
-                    <button 
-                        onClick={() => setCurrentView('settings')}
-                        className={`p-2 rounded-2xl transition-all active:scale-95
-                            ${darkMode ? 'hover:bg-slate-700' : 'hover:bg-white/50'}
-                        `}
-                        aria-label="Settings"
-                    >
-                        <Settings className={`w-10 h-10 ${darkMode ? 'text-gray-300' : 'text-stone-600'}`} strokeWidth={2.5} />
-                    </button>
-                </div>
+        <header className="px-6 pt-8 pb-4">
+          {/* Top Row: Brand & Toggles */}
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-extrabold text-indigo-600 tracking-tight">SecondYouth</h1>
+            <div className="flex gap-3">
+              <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all">
+                {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+              </button>
+              <button onClick={() => setCurrentView('settings')} className="p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-all">
+                <Settings size={24} />
+              </button>
             </div>
-            <div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
-                    {getGreeting()}, {userName}
-                </h2>
-                <p className="text-lg font-bold text-slate-700">
-                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-            </div>
-        </header>
+          </div>
+        {/* Bottom Row: Greeting (FORCED DARK TEXT IN LIGHT MODE) */}
+        <div>
+            <h2 className="text-3xl font-bold text-slate-900 dark:text-white">
+                {greeting}, {userName}
+            </h2>
+            <p className="text-lg font-bold text-slate-700 dark:text-slate-400">
+                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+        </div>
+      </header>
       )}
 
       {/* Main Content */}
@@ -348,8 +322,8 @@ export default function App() {
             onBack={() => setCurrentView('home')}
             onAddContact={addContact}
             onAddMedicine={addMedicine}
-            darkMode={darkMode}
-            toggleDarkMode={toggleDarkMode}
+            darkMode={isDarkMode}
+            toggleDarkMode={() => setIsDarkMode(!isDarkMode)}
             dementiaMode={dementiaMode}
             toggleDementiaMode={() => setDementiaMode(!dementiaMode)}
             onUpdateUser={setUserName}
@@ -364,24 +338,14 @@ export default function App() {
             {/* SOS Button */}
             <button 
                 onClick={triggerSos}
-                className={`h-40 w-full backdrop-blur-md border rounded-3xl flex items-center justify-center px-8 gap-6 shadow-xl hover:scale-105 transition-all duration-300 group
-                    ${darkMode 
-                        ? 'bg-red-900/20 border-red-900 hover:bg-red-900/40 hover:shadow-red-900/50' 
-                        : 'bg-red-50/90 border-red-100 hover:shadow-red-200'
-                    }
-                `}
+                className={`h-40 w-full rounded-[2rem] flex items-center justify-center px-8 gap-6 shadow-xl shadow-red-500/40 hover:scale-[1.02] active:scale-95 transition-all duration-300 group bg-gradient-to-r from-red-500 via-red-600 to-rose-600 animate-pulse`}
                >
-                <div className={`p-5 rounded-2xl transition-colors
-                    ${darkMode 
-                        ? 'bg-red-900/50 group-hover:bg-red-800' 
-                        : 'bg-red-200 group-hover:bg-red-300'
-                    }
-                `}>
-                  <AlertTriangle className={`w-20 h-20 ${darkMode ? 'text-red-400' : 'text-red-700'}`} strokeWidth={2.5} />
+                <div className={`p-5 rounded-2xl`}>
+                  <AlertTriangle className={`w-20 h-20 text-white`} strokeWidth={2.5} />
                 </div>
                 <div className="flex flex-col items-start">
-                    <span className={`text-5xl font-bold ${darkMode ? 'text-red-200' : 'text-red-900'}`}>SOS Alert</span>
-                    <span className={`font-medium text-2xl ${darkMode ? 'text-red-400' : 'text-red-700/80'}`}>Emergency Help</span>
+                    <span className={`text-5xl font-bold text-white`}>SOS Alert</span>
+                    <span className={`font-medium text-2xl text-white/80`}>Emergency Help</span>
                 </div>
               </button>
 
@@ -390,54 +354,26 @@ export default function App() {
               {/* Medicine Button */}
               <button 
                 onClick={() => setCurrentView('medicines')}
-                className={`h-40 w-full backdrop-blur-md border rounded-3xl flex flex-col items-center justify-center p-6 gap-3 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 group
-                    ${darkMode 
-                        ? 'bg-slate-800/80 border-slate-700 hover:border-emerald-500/50' 
-                        : 'bg-white/90 border-white/50'
-                    }
-                `}
+                className={`h-40 w-full rounded-[2rem] flex flex-col items-center justify-center p-6 gap-3 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:scale-[1.02] active:scale-95 group bg-gradient-to-br from-emerald-400 to-green-600`}
               >
-                <div className={`p-4 rounded-full transition-colors
-                    ${darkMode 
-                        ? 'bg-emerald-900/30 group-hover:bg-emerald-800/50' 
-                        : 'bg-emerald-100 group-hover:bg-emerald-200'
-                    }
-                `}>
-                  <Pill className={`w-12 h-12 ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`} strokeWidth={2.5} />
+                <div className={`p-4 rounded-full`}>
+                  <Pill className={`w-12 h-12 text-white`} strokeWidth={2.5} />
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className={`text-2xl font-bold transition-colors ${
-                        darkMode 
-                        ? 'text-gray-100 group-hover:text-emerald-300' 
-                        : 'text-stone-800 group-hover:text-emerald-800'
-                    }`}>Medicine</span>
+                    <span className={`text-2xl font-bold text-white`}>Medicine</span>
                 </div>
               </button>
 
               {/* Family Button */}
               <button 
                 onClick={() => setShowFamily(true)}
-                className={`h-40 w-full backdrop-blur-md border rounded-3xl flex flex-col items-center justify-center p-6 gap-3 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 group
-                    ${darkMode 
-                        ? 'bg-slate-800/80 border-slate-700 hover:border-blue-500/50' 
-                        : 'bg-white/90 border-white/50'
-                    }
-                `}
+                className={`h-40 w-full rounded-[2rem] flex flex-col items-center justify-center p-6 gap-3 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:scale-[1.02] active:scale-95 group bg-gradient-to-br from-blue-400 to-indigo-600`}
               >
-                <div className={`p-4 rounded-full transition-colors
-                    ${darkMode 
-                        ? 'bg-blue-900/30 group-hover:bg-blue-800/50' 
-                        : 'bg-blue-100 group-hover:bg-blue-200'
-                    }
-                `}>
-                  <Phone className={`w-12 h-12 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} strokeWidth={2.5} />
+                <div className={`p-4 rounded-full`}>
+                  <Phone className={`w-12 h-12 text-white`} strokeWidth={2.5} />
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className={`text-2xl font-bold transition-colors ${
-                        darkMode 
-                        ? 'text-gray-100 group-hover:text-blue-300' 
-                        : 'text-stone-800 group-hover:text-blue-800'
-                    }`}>Family</span>
+                    <span className={`text-2xl font-bold text-white`}>Family</span>
                 </div>
               </button>
             </div>
@@ -447,54 +383,26 @@ export default function App() {
               {/* Third Eye Button */}
               <button 
                 onClick={() => setCurrentView('vision')}
-                className={`h-40 w-full backdrop-blur-md border rounded-3xl flex flex-col items-center justify-center p-6 gap-3 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 group
-                    ${darkMode 
-                        ? 'bg-slate-800/80 border-slate-700 hover:border-yellow-500/50' 
-                        : 'bg-white/90 border-white/50'
-                    }
-                `}
+                className={`h-40 w-full rounded-[2rem] flex flex-col items-center justify-center p-6 gap-3 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:scale-[1.02] active:scale-95 group bg-gradient-to-br from-amber-400 to-orange-500`}
               >
-                <div className={`p-4 rounded-full transition-colors
-                    ${darkMode 
-                        ? 'bg-yellow-900/30 group-hover:bg-yellow-800/50' 
-                        : 'bg-yellow-100 group-hover:bg-yellow-200'
-                    }
-                `}>
-                  <Eye className={`w-12 h-12 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} strokeWidth={2.5} />
+                <div className={`p-4 rounded-full`}>
+                  <Eye className={`w-12 h-12 text-white`} strokeWidth={2.5} />
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className={`text-2xl font-bold transition-colors ${
-                        darkMode 
-                        ? 'text-gray-100 group-hover:text-yellow-300' 
-                        : 'text-stone-800 group-hover:text-yellow-800'
-                    }`}>Third Eye</span>
+                    <span className={`text-2xl font-bold text-white`}>Third Eye</span>
                 </div>
               </button>
 
               {/* Legacy Vault Button */}
               <button 
                 onClick={() => setCurrentView('legacy')}
-                className={`h-40 w-full backdrop-blur-md border rounded-3xl flex flex-col items-center justify-center p-6 gap-3 shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 group
-                    ${darkMode 
-                        ? 'bg-slate-800/80 border-slate-700 hover:border-rose-500/50' 
-                        : 'bg-white/90 border-white/50'
-                    }
-                `}
+                className={`h-40 w-full rounded-[2rem] flex flex-col items-center justify-center p-6 gap-3 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:scale-[1.02] active:scale-95 group bg-gradient-to-br from-pink-500 to-rose-500`}
               >
-                <div className={`p-4 rounded-full transition-colors
-                    ${darkMode 
-                        ? 'bg-rose-900/30 group-hover:bg-rose-800/50' 
-                        : 'bg-rose-100 group-hover:bg-rose-200'
-                    }
-                `}>
-                  <BookHeart className={`w-12 h-12 ${darkMode ? 'text-rose-400' : 'text-rose-600'}`} strokeWidth={2.5} />
+                <div className={`p-4 rounded-full`}>
+                  <BookHeart className={`w-12 h-12 text-white`} strokeWidth={2.5} />
                 </div>
                 <div className="flex flex-col items-center">
-                    <span className={`text-2xl font-bold transition-colors ${
-                        darkMode 
-                        ? 'text-gray-100 group-hover:text-rose-300' 
-                        : 'text-stone-800 group-hover:text-rose-800'
-                    }`}>Legacy Vault</span>
+                    <span className={`text-2xl font-bold text-white`}>Legacy Vault</span>
                 </div>
               </button>
             </div>
@@ -502,42 +410,23 @@ export default function App() {
             {/* Safe Zone Card (Conditional) */}
             {dementiaMode && (
               <section 
-                className={`rounded-3xl p-8 border shadow-xl backdrop-blur-md transition-all duration-500
-                    ${inSafeZone 
-                        ? (darkMode 
-                            ? 'bg-slate-800/80 border-emerald-700' 
-                            : 'bg-white/80 border-emerald-200'
-                          )
-                        : (darkMode
-                            ? 'bg-red-900/60 border-red-700 animate-pulse'
-                            : 'bg-red-50/90 border-red-300 animate-pulse'
-                          )
-                    }
-                `}
+                className={`rounded-[2rem] p-8 shadow-xl transition-all duration-500 bg-slate-900/90 text-white backdrop-blur-md`}
               >
                 <div className="flex items-center gap-6 mb-4">
-                  <div className={`p-3 rounded-2xl ${
-                      inSafeZone 
-                      ? (darkMode ? 'bg-emerald-900/50' : 'bg-emerald-100') 
-                      : (darkMode ? 'bg-red-900/50' : 'bg-red-100')
-                    }`}>
-                    <MapPin className={`w-12 h-12 ${
-                        inSafeZone 
-                        ? (darkMode ? 'text-emerald-400' : 'text-emerald-600') 
-                        : (darkMode ? 'text-red-400' : 'text-red-600')
-                    }`} strokeWidth={3} />
+                  <div className={`p-3 rounded-2xl`}>
+                    <MapPin className={`w-12 h-12 ${inSafeZone ? 'text-emerald-400' : 'text-red-400'}`} strokeWidth={3} />
                   </div>
-                  <h2 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-stone-800'}`}>
+                  <h2 className={`text-3xl font-bold tracking-tight text-white`}>
                     {inSafeZone ? 'Safe Zone' : 'ALERT!'}
                   </h2>
                 </div>
-                <p className={`text-2xl font-medium leading-relaxed ${darkMode ? 'text-gray-300' : 'text-stone-700'}`}>
+                <p className={`text-2xl font-medium leading-relaxed text-gray-300`}>
                   {inSafeZone ? 'You are currently in the safe zone.' : 'You have left the designated safe zone!'}
                 </p>
                 
                 <button 
                   onClick={() => setInSafeZone(!inSafeZone)} 
-                  className={`mt-6 text-base font-semibold underline ${darkMode ? 'text-gray-500 hover:text-gray-300' : 'text-stone-400 hover:text-stone-600'}`}
+                  className={`mt-6 text-base font-semibold underline text-gray-500 hover:text-gray-300`}
                 >
                   (Tap to Simulate {inSafeZone ? 'Breach' : 'Safety'})
                 </button>
