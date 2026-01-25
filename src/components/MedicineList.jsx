@@ -22,7 +22,7 @@ export default function MedicineList({ medicines, toggleMedicine, onBack, onNavi
             <Pill className="w-24 h-24 text-white/20" strokeWidth={1.5} />
             <h2 className="text-3xl font-bold tracking-tight text-white">No medicines scheduled.</h2>
             <button 
-                onClick={() => onNavigate('settings')}
+                onClick={() => onNavigate('settings-medicine')}
                 className="h-20 w-full max-w-sm bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-lg hover:shadow-indigo-500/50 text-xl font-bold"
             >
                 Add Medicines in Settings

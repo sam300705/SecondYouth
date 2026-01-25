@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, UserPlus, Pill, Shield, LogOut } from 'lucide-react';
 
-export default function SettingsView({ onBack, onAddContact, onAddMedicine, dementiaMode, toggleDementiaMode, onUpdateUser, onLogout }) {
+export default function SettingsView({ onBack, onAddContact, onAddMedicine, dementiaMode, toggleDementiaMode, onUpdateUser, onLogout, highlightMedicine }) {
   // State for forms
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -11,6 +11,21 @@ export default function SettingsView({ onBack, onAddContact, onAddMedicine, deme
   const [medTime, setMedTime] = useState('');
   const [medShape, setMedShape] = useState('Round');
   const [medColor, setMedColor] = useState('red');
+
+  const medicineSectionRef = useRef(null);
+
+  useEffect(() => {
+    if (highlightMedicine && medicineSectionRef.current) {
+      medicineSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Optional: Flash the section to draw attention
+      medicineSectionRef.current.classList.add('ring-4', 'ring-emerald-500', 'transition-all', 'duration-300');
+      setTimeout(() => {
+        if (medicineSectionRef.current) {
+            medicineSectionRef.current.classList.remove('ring-4', 'ring-emerald-500');
+        }
+      }, 2000);
+    }
+  }, [highlightMedicine]);
 
   const handleSaveContact = () => {
     if (contactName && contactPhone && contactRelation) {
@@ -94,7 +109,7 @@ export default function SettingsView({ onBack, onAddContact, onAddMedicine, deme
       </section>
 
       {/* Add Medicine Form */}
-      <section className={sectionClasses}>
+      <section ref={medicineSectionRef} className={sectionClasses}>
         <div className="flex items-center gap-3 mb-2">
             <Pill className="w-8 h-8 text-emerald-400" />
             <h3 className="text-2xl font-bold tracking-tight">Add Medicine</h3>
