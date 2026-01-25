@@ -249,7 +249,7 @@ export default function App() {
       <main className="p-6 md:p-8 max-w-lg mx-auto flex flex-col gap-6">
         
         {currentView === 'medicines' ? <MedicineList medicines={medicines} toggleMedicine={toggleMedicine} onBack={() => setCurrentView('home')} onNavigate={setCurrentView} />
-        : currentView === 'settings' ? <SettingsView onBack={() => setCurrentView('home')} onAddContact={addContact} onAddMedicine={addMedicine} onUpdateUser={setUserName} onLogout={handleLogout} />
+        : currentView === 'settings' ? <SettingsView onBack={() => setCurrentView('home')} onAddContact={addContact} onAddMedicine={addMedicine} onUpdateUser={setUserName} onLogout={handleLogout} dementiaMode={dementiaMode} toggleDementiaMode={() => setDementiaMode(!dementiaMode)} />
         : currentView === 'vision' ? <VisionView onNavigate={setCurrentView} />
         : currentView === 'legacy' ? <LegacyView onNavigate={setCurrentView} />
         : ( /* HOME VIEW */
