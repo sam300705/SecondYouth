@@ -1,0 +1,12 @@
+{
+  "name": "SecondYouth",
+  "short_name": "SecondYouth",
+  "description": "Accessible everyday-care tools for medicines, family, safety, camera assistance, and memories.",
+  "start_url": "/#/home",
+  "display": "standalone",
+  "background_color": "#f3f7f4",
+  "theme_color": "#176b4a",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,60 +1,30 @@
-import React, { useState } from 'react';
-import { Fingerprint } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Fingerprint, LockKeyhole, ShieldCheck } from 'lucide-react';
 
-const LoginView = ({ onLogin }) => {
+export default function LoginView({ profile, onLogin, onReset }) {
   const [isScanning, setIsScanning] = useState(false);
+  const [seconds, setSeconds] = useState(0);
 
-  const handleFaceIdLogin = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      onLogin();
-    }, 2000);
-  };
+  useEffect(() => {
+    if (!isScanning) return undefined;
+    const timeout = window.setTimeout(() => { setSeconds(0); onLogin(); }, 1100);
+    const tick = window.setInterval(() => setSeconds((value) => value + 1), 350);
+    return () => { window.clearTimeout(timeout); window.clearInterval(tick); };
+  }, [isScanning, onLogin]);
 
   return (
-    <div className="flex items-center justify-center h-screen w-full">
-      <div className="w-full max-w-md p-8 space-y-6 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-white">
-            SecondYouth
-          </h1>
-          <p className="text-lg text-white/70">
-            Secure Access Portal
-          </p>
-        </div>
-
-        {/* Biometric-Only Login Button */}
-        <div className="pt-6 pb-2">
-            <button
-            onClick={handleFaceIdLogin}
-            disabled={isScanning}
-            className="w-full h-64 flex flex-col items-center justify-center p-6 rounded-2xl bg-white/20 hover:bg-white/30 active:scale-95 transition-all duration-300 relative overflow-hidden"
-            >
-            {isScanning ? (
-                <>
-                <div className="relative w-24 h-24 flex items-center justify-center mb-4">
-                    <Fingerprint className="w-24 h-24 text-white/50" />
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-cyan-400 animate-scan-line" style={{ boxShadow: '0 0 15px #22d3ee' }}/>
-                </div>
-                <span className="text-2xl font-bold text-white/90">Verifying...</span>
-                </>
-            ) : (
-                <>
-                <Fingerprint className="w-24 h-24 text-white mb-4" />
-                <span className="text-3xl font-bold text-white">
-                    Tap to Login
-                </span>
-                <span className="text-base font-medium text-white/70 mt-1">
-                    Secure Face ID Verification
-                </span>
-                </>
-            )}
-            </button>
-        </div>
-        
-      </div>
+    <div className="auth-shell">
+      <main className="auth-card login-card" aria-labelledby="login-title">
+        <div className="brand-lockup"><div className="brand-icon"><ShieldCheck /></div><div><strong>SecondYouth</strong><span>Private device access</span></div></div>
+        <section className="login-copy"><p className="eyebrow">Welcome back</p><h1 id="login-title">Hello, {profile.name}.</h1><p className="lead">Unlock your care dashboard on this device.</p></section>
+        <button type="button" className={`biometric-button ${isScanning ? 'is-scanning' : ''}`} onClick={() => setIsScanning(true)} disabled={isScanning}>
+          <span className="scan-orbit"><Fingerprint aria-hidden="true" /><i /></span>
+          <strong>{isScanning ? 'Checking this device…' : 'Tap to unlock'}</strong>
+          <span>{isScanning ? `Verification step ${Math.min(seconds + 1, 3)} of 3` : 'Local demo access'}</span>
+        </button>
+        <div className="demo-note"><LockKeyhole aria-hidden="true" /><span>This client-only demo cannot provide production authentication. A deployed health product should use verified passkeys and a secure backend.</span></div>
+        <button type="button" className="text-button danger-text" onClick={onReset}>Reset this device</button>
+      </main>
     </div>
   );
-};
-
-export default LoginView;
+}

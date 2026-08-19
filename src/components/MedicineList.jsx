@@ -1,94 +1,57 @@
-import { Pill, Check, ArrowLeft, Clock } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowLeft, Check, Clock, Pencil, Pill, Plus, Trash2, X } from 'lucide-react';
+import { formatMedicineTime, isMedicineTakenToday, makeId, todayKey } from '../lib/appStore.js';
 
-export default function MedicineList({ medicines, toggleMedicine, onBack, onNavigate }) {
-  
-  const renderPillIcon = (med) => {
-    let colorClass = 'bg-slate-500';
-    if (med.color === 'red') colorClass = 'bg-red-500';
-    if (med.color === 'blue') colorClass = 'bg-blue-500';
-    if (med.color === 'white') colorClass = 'bg-white';
-    if (med.color === 'yellow') colorClass = 'bg-yellow-400';
+const emptyForm = { name: '', dose: '', time: '08:00', instructions: '', color: 'blue', shape: 'round' };
 
-    if (med.shape === 'Capsule') {
-      return <div className={`w-14 h-8 rounded-full ${colorClass} shadow-inner`} />;
+export default function MedicineList({ medicines, onChange, onBack, notify }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [error, setError] = useState('');
+
+  const sorted = useMemo(() => [...medicines].sort((a, b) => a.time.localeCompare(b.time)), [medicines]);
+  const update = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
+
+  const openNew = () => { setEditingId(null); setForm(emptyForm); setError(''); setShowForm(true); };
+  const openEdit = (medicine) => { setEditingId(medicine.id); setForm({ ...emptyForm, ...medicine }); setError(''); setShowForm(true); };
+  const close = () => { setShowForm(false); setEditingId(null); setError(''); };
+
+  const save = (event) => {
+    event.preventDefault();
+    if (!form.name.trim() || !form.time) { setError('Medicine name and time are required.'); return; }
+    if (editingId) {
+      onChange(medicines.map((medicine) => medicine.id === editingId ? { ...medicine, ...form, name: form.name.trim() } : medicine));
+      notify('Medicine updated.', 'success');
     } else {
-      return <div className={`w-10 h-10 rounded-full ${colorClass} shadow-inner`} />;
+      onChange([...medicines, { ...form, id: makeId('medicine'), name: form.name.trim(), active: true, createdAt: new Date().toISOString(), lastTakenDate: null }]);
+      notify('Medicine added to the daily schedule.', 'success');
     }
+    close();
   };
 
-  if (medicines.length === 0) {
-    return (
-        <div className="flex flex-col gap-8 w-full text-center items-center justify-center py-20 bg-white/5 backdrop-blur-lg border border-white/10 rounded-3xl">
-            <Pill className="w-24 h-24 text-white/20" strokeWidth={1.5} />
-            <h2 className="text-3xl font-bold tracking-tight text-white">No medicines scheduled.</h2>
-            <button 
-                onClick={() => onNavigate('settings-medicine')}
-                className="h-20 w-full max-w-sm bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-lg hover:shadow-indigo-500/50 text-xl font-bold"
-            >
-                Add Medicines in Settings
-            </button>
-        </div>
-    )
-  }
+  const toggleTaken = (id) => {
+    onChange(medicines.map((medicine) => medicine.id === id ? { ...medicine, lastTakenDate: isMedicineTakenToday(medicine) ? null : todayKey() } : medicine));
+  };
+
+  const remove = (medicine) => {
+    if (!window.confirm(`Remove ${medicine.name} from the schedule?`)) return;
+    onChange(medicines.filter((item) => item.id !== medicine.id));
+    notify('Medicine removed.', 'info');
+  };
 
   return (
-    <div className="flex flex-col gap-6 w-full pb-10">
-      <button 
-        onClick={onBack}
-        className="h-20 w-full rounded-3xl flex items-center justify-center gap-4 transition-all shadow-xl mb-4 bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/20 active:scale-95"
-      >
-        <ArrowLeft className="w-10 h-10 text-white/80" strokeWidth={2.5} />
-        <span className="text-2xl font-bold tracking-tight text-white">Back to Home</span>
-      </button>
+    <div className="page-stack">
+      <header className="page-header"><button type="button" className="icon-button" onClick={onBack} aria-label="Back to home"><ArrowLeft /></button><div><p className="eyebrow">Daily schedule</p><h1>Medicines</h1></div><button type="button" className="icon-button primary-icon" onClick={openNew} aria-label="Add medicine"><Plus /></button></header>
+      <div className="progress-card"><div><strong>{medicines.filter((medicine) => isMedicineTakenToday(medicine)).length} of {medicines.length}</strong><span>medicines taken today</span></div><div className="progress-track"><i style={{ width: `${medicines.length ? (medicines.filter((medicine) => isMedicineTakenToday(medicine)).length / medicines.length) * 100 : 0}%` }} /></div></div>
+      {!sorted.length ? <div className="empty-state"><div><Pill /></div><h2>No medicines yet</h2><p>Add the medicines you take each day. This demo stores your schedule on this device.</p><button type="button" className="primary-button" onClick={openNew}><Plus /> Add medicine</button></div> : (
+        <div className="list-stack">{sorted.map((medicine) => {
+          const taken = isMedicineTakenToday(medicine);
+          return <article className={`medicine-card ${taken ? 'is-taken' : ''}`} key={medicine.id}><button type="button" className={`take-button color-${medicine.color}`} onClick={() => toggleTaken(medicine.id)} aria-label={`${taken ? 'Mark as not taken' : 'Mark as taken'}: ${medicine.name}`}>{taken ? <Check /> : <Pill />}</button><div className="medicine-copy"><span>{formatMedicineTime(medicine.time)}</span><h2>{medicine.name}</h2><p>{[medicine.dose, medicine.instructions].filter(Boolean).join(' · ') || 'Daily medicine'}</p></div><div className="card-actions"><button type="button" onClick={() => openEdit(medicine)} aria-label={`Edit ${medicine.name}`}><Pencil /></button><button type="button" onClick={() => remove(medicine)} aria-label={`Delete ${medicine.name}`}><Trash2 /></button></div>{taken && <em>TAKEN TODAY</em>}</article>;
+        })}</div>
+      )}
 
-      <h2 className="text-4xl font-bold tracking-tight text-white px-2 mb-2">My Medicines</h2>
-
-      <div className="flex flex-col gap-6">
-        {medicines.map((med, index) => (
-          <div 
-            key={index}
-            className={`relative rounded-3xl p-6 transition-all duration-300 shadow-2xl bg-white/5 backdrop-blur-xl border ${med.isTaken ? 'border-emerald-500/50' : 'border-white/20'}`}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-5 flex-1">
-                <div className={`p-4 rounded-2xl flex items-center justify-center w-24 h-24 bg-black/20`}>
-                   {med.isTaken ? (
-                       <Pill className="w-12 h-12 text-emerald-400" />
-                   ) : (
-                       renderPillIcon(med)
-                   )}
-                </div>
-                
-                <div className="flex flex-col">
-                  <span className={`text-3xl font-bold tracking-tight ${med.isTaken ? 'text-emerald-400/80 line-through decoration-4' : 'text-white'}`}>
-                    {med.name}
-                  </span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Clock className="w-6 h-6 text-white/50" />
-                    <span className="text-xl font-medium text-white/70">
-                      {med.time}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => toggleMedicine(index)}
-                className={`h-20 w-20 rounded-2xl border-2 flex items-center justify-center transition-all active:scale-90 shadow-lg ${med.isTaken ? 'bg-emerald-500 border-emerald-400' : 'bg-white/10 border-white/20 hover:bg-white/20'}`}
-                aria-label={`Mark ${med.name} as ${med.isTaken ? 'not taken' : 'taken'}`}
-              >
-                {med.isTaken && <Check className="w-12 h-12 text-white" strokeWidth={4} />}
-              </button>
-            </div>
-
-            {med.isTaken && (
-              <div className="absolute top-3 right-28 px-4 py-1 bg-emerald-500/20 rounded-full backdrop-blur-sm border border-emerald-500/30">
-                <span className="text-sm font-bold text-emerald-300 tracking-wider">TAKEN</span>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      {showForm && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}><form className="modal-card" onSubmit={save} aria-labelledby="medicine-form-title"><div className="modal-head"><div><p className="eyebrow">{editingId ? 'Edit schedule' : 'New schedule'}</p><h2 id="medicine-form-title">{editingId ? 'Update medicine' : 'Add medicine'}</h2></div><button type="button" className="icon-button" onClick={close} aria-label="Close form"><X /></button></div><label className="field"><span>Medicine name *</span><input autoFocus value={form.name} onChange={update('name')} placeholder="Example: Metformin" /></label><div className="form-grid"><label className="field"><span>Dose</span><input value={form.dose} onChange={update('dose')} placeholder="500 mg" /></label><label className="field"><span>Time *</span><input type="time" value={form.time} onChange={update('time')} /></label></div><label className="field"><span>Instructions</span><input value={form.instructions} onChange={update('instructions')} placeholder="After breakfast" /></label><div className="form-grid"><label className="field"><span>Shape</span><select value={form.shape} onChange={update('shape')}><option value="round">Round</option><option value="capsule">Capsule</option><option value="tablet">Tablet</option></select></label><label className="field"><span>Color</span><select value={form.color} onChange={update('color')}><option value="blue">Blue</option><option value="green">Green</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="white">White</option></select></label></div>{error && <p className="form-error">{error}</p>}<button type="submit" className="primary-button">{editingId ? 'Save changes' : 'Add to schedule'}</button></form></div>}
     </div>
   );
 }

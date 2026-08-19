@@ -1,107 +1,51 @@
-import { useState } from 'react';
-import { Eye, X, ScanLine, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Camera, CameraOff, CircleAlert, Eye, ScanLine, Volume2 } from 'lucide-react';
 
-export default function VisionView({ onNavigate }) {
+const examples = {
+  medicine: { title: 'Medicine label example', text: 'Example result: Atorvastatin. Check the printed name, dose, and expiry date before taking it.', tone: 'safe' },
+  bill: { title: 'Bill example', text: 'Example result: Electricity bill. Amount and due date would appear here after OCR processing.', tone: 'info' },
+  cleaner: { title: 'Hazard example', text: 'Example warning: Household cleaner. Do not ingest. Keep away from children.', tone: 'danger' },
+};
+
+export default function VisionView({ onBack, notify }) {
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const [cameraState, setCameraState] = useState('idle');
   const [scenario, setScenario] = useState('medicine');
-  const [isScanning, setIsScanning] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState(null);
 
-  const scenarios = {
-    medicine: { text: 'This is Atorvastatin. Expiry: Dec 2026. Safe to take.', type: 'safe' },
-    bill: { text: 'Electricity Bill. Amount: ₹450. Due: Tomorrow.', type: 'info' },
-    cleaner: { text: 'DANGER! Toilet Cleaner. TOXIC. DO NOT INGEST.', type: 'danger' },
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setCameraState('idle');
   };
 
-  const handleIdentify = () => {
-    setIsScanning(true);
-    setResult(null);
-    setTimeout(() => {
-      const scenarioResult = scenarios[scenario];
-      setResult(scenarioResult);
-      setIsScanning(false);
-      window.speechSynthesis.speak(new SpeechSynthesisUtterance(scenarioResult.text));
-    }, 2000);
+  useEffect(() => () => streamRef.current?.getTracks().forEach((track) => track.stop()), []);
+
+  const startCamera = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) { setCameraState('unsupported'); return; }
+    setCameraState('loading');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      streamRef.current = stream;
+      if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+      setCameraState('active');
+    } catch { setCameraState('denied'); }
   };
 
-  const renderResult = () => {
-    if (!result) return null;
-
-    let styles = {
-        base: 'bg-indigo-900/80 border-indigo-400',
-        icon: <Eye className="w-16 h-16 mx-auto mb-4 text-indigo-300" />
-    };
-    if (result.type === 'danger') {
-        styles = { base: 'bg-red-900/80 border-red-400', icon: <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-300" /> };
-    }
-    if (result.type === 'safe') {
-        styles = { base: 'bg-emerald-900/80 border-emerald-400', icon: <Eye className="w-16 h-16 mx-auto mb-4 text-emerald-300" /> };
-    }
-
-    return (
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-20">
-        <div className={`text-white text-center rounded-3xl p-8 border ${styles.base}`}>
-          {styles.icon}
-          <p className="text-3xl font-bold tracking-tight">{result.text}</p>
-          <button
-            onClick={() => setResult(null)}
-            className="mt-8 bg-white/10 hover:bg-white/20 border border-white/20 px-10 py-3 rounded-full text-lg font-semibold active:scale-95 transition-all"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
+  const scanDemo = () => {
+    if (cameraState !== 'active') { notify('Start the camera before scanning.', 'error'); return; }
+    setScanning(true); setResult(null);
+    window.setTimeout(() => { setScanning(false); setResult(examples[scenario]); }, 1400);
   };
 
-  return (
-    <div className="fixed inset-0 bg-slate-900 text-white flex flex-col items-center justify-center font-sans">
-      <div className="absolute top-6 left-6 z-10">
-        <button onClick={() => onNavigate('home')} className="flex items-center gap-3 text-white/80 hover:text-white bg-white/10 backdrop-blur-xl border border-white/10 p-4 rounded-2xl shadow-lg active:scale-95 transition-all">
-          <ArrowLeft className="w-8 h-8" />
-          <span className="font-bold text-lg tracking-tight">Back to Home</span>
-        </button>
-      </div>
+  const speak = () => {
+    if (!result || !('speechSynthesis' in window)) { notify('Read-aloud is not supported in this browser.', 'error'); return; }
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(result.text));
+  };
 
-      <div className="absolute top-6 right-6 z-10">
-        <select
-          value={scenario}
-          onChange={(e) => setScenario(e.target.value)}
-          className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-4 text-base font-semibold"
-        >
-          <option value="medicine">Scan Medicine</option>
-          <option value="bill">Scan Bill</option>
-          <option value="cleaner">Scan Household Object</option>
-        </select>
-      </div>
-
-      <div className="w-full max-w-2xl h-[500px] bg-black/50 rounded-3xl border-4 border-white/10 flex items-center justify-center overflow-hidden relative shadow-2xl">
-        <p className="text-white/40 text-2xl tracking-tight">CAMERA FEED</p>
-        {isScanning && (
-          <>
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-cyan-400 animate-scan-line" style={{ boxShadow: '0 0 20px 2px #22d3ee' }} />
-            <p className="z-10 text-3xl font-bold tracking-tight text-white/90">IDENTIFYING...</p>
-          </>
-        )}
-      </div>
-
-      <div className="mt-8 text-center">
-        <button
-          onClick={handleIdentify}
-          disabled={isScanning}
-          className="w-48 h-24 bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl flex items-center justify-center shadow-lg active:scale-95 transition-all group"
-        >
-          <div className="flex flex-col items-center justify-center">
-            <Eye className="w-10 h-10 text-white/90 mb-1 group-hover:scale-110 transition-transform" />
-            <span className="text-white font-bold tracking-tight text-center text-sm leading-tight">
-              IDENTIFY
-            </span>
-          </div>
-        </button>
-      </div>
-
-      {renderResult()}
-    </div>
-  );
+  return <div className="page-stack vision-page"><header className="page-header"><button type="button" className="icon-button" onClick={() => { stopCamera(); onBack(); }} aria-label="Back to home"><ArrowLeft /></button><div><p className="eyebrow">Camera tool</p><h1>Safety scanner</h1></div><span /></header><div className="demo-banner"><CircleAlert /><p><strong>Interactive demonstration:</strong> the camera is real, but object recognition results are sample scenarios. Medical identification requires a validated AI service and human confirmation.</p></div><section className={`camera-stage state-${cameraState}`}><video ref={videoRef} muted playsInline aria-label="Live camera preview" /><div className="camera-placeholder">{cameraState === 'denied' ? <><CameraOff /><strong>Camera permission denied</strong><span>Allow camera access in your browser settings and try again.</span></> : cameraState === 'unsupported' ? <><CameraOff /><strong>Camera unavailable</strong><span>This browser does not support camera access.</span></> : cameraState !== 'active' ? <><Camera /><strong>{cameraState === 'loading' ? 'Starting camera…' : 'Point the camera at an object'}</strong><span>Nothing is uploaded from this device.</span></> : null}</div>{scanning && <div className="scan-overlay"><i /><ScanLine /><strong>Analyzing demo scenario…</strong></div>}</section><div className="scanner-controls"><label className="field"><span>Demonstration scenario</span><select value={scenario} onChange={(event) => { setScenario(event.target.value); setResult(null); }}><option value="medicine">Medicine label</option><option value="bill">Household bill</option><option value="cleaner">Hazardous cleaner</option></select></label><div className="button-row">{cameraState === 'active' ? <button type="button" className="secondary-button" onClick={stopCamera}><CameraOff /> Stop camera</button> : <button type="button" className="secondary-button" onClick={startCamera}><Camera /> Start camera</button>}<button type="button" className="primary-button" onClick={scanDemo} disabled={scanning}><Eye /> {scanning ? 'Scanning…' : 'Run demo scan'}</button></div></div>{result && <section className={`scan-result result-${result.tone}`} aria-live="polite"><div><h2>{result.title}</h2><p>{result.text}</p></div><button type="button" className="icon-button" onClick={speak} aria-label="Read result aloud"><Volume2 /></button></section>}</div>;
 }
 
