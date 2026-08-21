@@ -67,3 +67,30 @@ public/
 ## Safety note
 
 SecondYouth is a portfolio demonstration. It is not a medical device and must not be relied on as the only way to contact emergency services, identify medicine, or monitor a vulnerable person.
+
+## Production-shaped platform foundations
+
+The repository now includes an opt-in Node API foundation under `server/`. It provides health and readiness probes, structured JSON errors, request IDs, secure response headers, bounded rate limiting, signed short-lived access tokens, refresh-token rotation with reuse detection, and a server-side assistant endpoint. In development, the API can run without credentials and provides a deterministic local assistant fallback; in production, set `SECONDYOUTH_JWT_SECRET` to a random value of at least 32 characters and keep `REQUIRE_AUTH=true`.
+
+```bash
+npm run api
+# API health: http://localhost:8787/healthz
+```
+
+The frontend assistant never receives an AI provider key. It calls `/api/v1/assistant` and falls back to a clearly labeled unavailable state when the API cannot be reached. If a provider-backed assistant is enabled, configure `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and optionally `OPENAI_MODEL` and `OPENAI_BASE_URL`. The assistant is intentionally restricted: it does not diagnose, change medication plans, or silently contact emergency services.
+
+The first deployment slice is intentionally a **modular monolith**, not premature microservices. `server/` contains the API boundary and security primitives; `src/` remains the offline-first product UI; `infra/docker/` contains the production image and local compose file; `infra/k8s/api.yaml` is a portable Kubernetes starting point; and `.github/workflows/ci.yml` runs the quality gate and container build on pushes and pull requests.
+
+## Verification
+
+The complete local quality gate is:
+
+```bash
+npm run check
+```
+
+It runs ESLint, the existing domain tests, server security/API tests, and the production Vite build. The API process is also smoke-tested through `/healthz`. Docker and Kubernetes artifacts are included for deployment environments that provide those runtimes; if Docker is not installed locally, GitHub Actions performs the container build.
+
+## Production prerequisites
+
+Before real user data is enabled, replace the in-memory refresh-token store with PostgreSQL or Redis-backed persistence, add a managed identity provider/passkey implementation, provision encrypted object storage, configure a durable notification provider, and complete privacy, threat-model, accessibility, and medical-safety review. The current offline demo remains the safe default when those services are not configured.

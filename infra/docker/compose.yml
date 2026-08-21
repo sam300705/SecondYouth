@@ -1,0 +1,17 @@
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8787:8787"
+    environment:
+      NODE_ENV: development
+      PORT: 8787
+      ALLOWED_ORIGIN: http://localhost:4173
+      REQUIRE_AUTH: "false"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

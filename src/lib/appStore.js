@@ -1,6 +1,8 @@
-export const STORAGE_KEY = 'secondyouth:v2';
+export const STORAGE_KEY = 'secondyouth.state.v1';
+export const STORAGE_VERSION = 1;
 
 export const defaultState = {
+  schemaVersion: STORAGE_VERSION,
   profile: null,
   medicines: [],
   contacts: [],
@@ -18,35 +20,47 @@ export const defaultState = {
 };
 
 const storageAvailable = () => typeof window !== 'undefined' && 'localStorage' in window;
+const cloneDefaultState = () => structuredClone(defaultState);
+
+function normalizeState(parsed) {
+  if (!parsed || typeof parsed !== 'object') return cloneDefaultState();
+  return {
+    ...cloneDefaultState(),
+    ...parsed,
+    schemaVersion: STORAGE_VERSION,
+    profile: parsed.profile ?? null,
+    medicines: Array.isArray(parsed.medicines) ? parsed.medicines : [],
+    contacts: Array.isArray(parsed.contacts) ? parsed.contacts : [],
+    settings: { ...defaultState.settings, ...(parsed.settings ?? {}) },
+    sosHistory: Array.isArray(parsed.sosHistory) ? parsed.sosHistory : [],
+    session: { locked: true },
+  };
+}
 
 export function loadState() {
-  if (!storageAvailable()) return defaultState;
+  if (!storageAvailable()) return cloneDefaultState();
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
-    if (!parsed || typeof parsed !== 'object') return defaultState;
-    return {
-      ...defaultState,
-      ...parsed,
-      profile: parsed.profile ?? null,
-      medicines: Array.isArray(parsed.medicines) ? parsed.medicines : [],
-      contacts: Array.isArray(parsed.contacts) ? parsed.contacts : [],
-      settings: { ...defaultState.settings, ...(parsed.settings ?? {}) },
-      sosHistory: Array.isArray(parsed.sosHistory) ? parsed.sosHistory : [],
-      session: { locked: true },
-    };
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return normalizeState(raw ? JSON.parse(raw) : null);
   } catch {
-    return defaultState;
+    return cloneDefaultState();
   }
 }
 
 export function saveState(state) {
-  if (!storageAvailable()) return;
-  const persisted = { ...state, session: { locked: true } };
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+  if (!storageAvailable()) return false;
+  try {
+    const persisted = normalizeState({ ...state, session: { locked: true } });
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function resetState() {
-  if (storageAvailable()) window.localStorage.removeItem(STORAGE_KEY);
+  if (!storageAvailable()) return;
+  try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* Storage may be blocked. */ }
 }
 
 export function makeId(prefix = 'item') {
@@ -115,4 +129,3 @@ export function emergencyMessage(profile, location) {
   const map = `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
   return `${who} My current location: ${map}`;
 }
-
