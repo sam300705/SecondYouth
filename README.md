@@ -2,7 +2,7 @@
 
 SecondYouth is an accessible, offline-first senior-assistance product demo. It brings medicine schedules, trusted contacts, emergency actions, location checks, a camera-based safety demonstration, and private audio memories into one simple interface.
 
-**Live demo:** [second-youth.vercel.app](https://second-youth.vercel.app/)
+**Live site:** [vridhcare.in](https://vridhcare.in) · [Vercel deployment](https://second-youth.vercel.app/)
 
 ## Product flows
 
