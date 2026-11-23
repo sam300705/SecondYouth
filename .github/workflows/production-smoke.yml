@@ -1,0 +1,51 @@
+name: SecondYouth live release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: secondyouth-live-release
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verify the HTTPS production site serves this build
+        shell: bash
+        run: |
+          set -euo pipefail
+          site=https://www.vridhcare.in
+          expected=$(grep -oE 'secondyouth-shell-[0-9a-f]{20}' dist/sw.js | head -n 1)
+          echo "Expected service worker: $expected"
+          for attempt in {1..12}; do
+            worker=$(curl --silent --show-error --fail --location --max-time 10 \
+              "$site/sw.js?release=$GITHUB_SHA&attempt=$attempt" || true)
+            if [[ "$worker" == *"$expected"* ]]; then
+              html=$(curl --silent --show-error --fail --location --max-time 10 "$site/")
+              bundle=$(grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' dist/index.html | head -n 1)
+              if [[ "$html" == *"$bundle"* ]]; then
+                curl --silent --show-error --fail --location --max-time 10 --output /dev/null "$site$bundle"
+                echo "Production serves the expected service worker and dashboard bundle."
+                exit 0
+              fi
+            fi
+            current=$(printf '%s\n' "$worker" | sed -n "s/.*const CACHE = '\([^']*\)'.*/\1/p")
+            echo "Attempt $attempt: live service worker ${current:-missing or unrecognized}."
+            if [[ "$attempt" -lt 12 ]]; then sleep 10; fi
+          done
+          echo "::error::The production domain did not serve the expected build. Check the SecondYouth Vercel project's production deployment and Git connection."
+          exit 1
