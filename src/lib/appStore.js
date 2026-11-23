@@ -59,8 +59,13 @@ export function saveState(state) {
 }
 
 export function resetState() {
-  if (!storageAvailable()) return;
-  try { window.localStorage.removeItem(STORAGE_KEY); } catch { /* Storage may be blocked. */ }
+  if (!storageAvailable()) return false;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function makeId(prefix = 'item') {
@@ -128,4 +133,42 @@ export function emergencyMessage(profile, location) {
   if (!location) return `${who} Please call me as soon as possible.`;
   const map = `https://maps.google.com/?q=${location.latitude},${location.longitude}`;
   return `${who} My current location: ${map}`;
+}
+
+const isRecord = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+const isText = (value) => typeof value === 'string';
+const isName = (value) => isText(value) && Boolean(value.trim());
+const isPhone = (value) => isText(value) && /^\+?\d{7,15}$/.test(value);
+const isLocation = (value) => isRecord(value)
+  && Number.isFinite(value.latitude) && Math.abs(value.latitude) <= 90
+  && Number.isFinite(value.longitude) && Math.abs(value.longitude) <= 180;
+const isRecordList = (items, validate) => Array.isArray(items)
+  && items.every((item) => isRecord(item) && isName(item.id) && validate(item))
+  && new Set(items.map((item) => item.id)).size === items.length;
+
+export function parseBackup(text) {
+  const backup = JSON.parse(text);
+  const validProfile = isRecord(backup?.profile) && isName(backup.profile.name)
+    && (backup.profile.phone === '' || isPhone(backup.profile.phone));
+  const validMedicines = isRecordList(backup?.medicines, (item) => isName(item.name)
+    && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.time)
+    && ['dose', 'instructions', 'color', 'shape'].every((key) => isText(item[key]))
+    && typeof item.active === 'boolean'
+    && (item.lastTakenDate === null || /^\d{4}-\d{2}-\d{2}$/.test(item.lastTakenDate)));
+  const validContacts = isRecordList(backup?.contacts, (item) => isName(item.name)
+    && isName(item.relation) && isPhone(item.phone) && typeof item.primary === 'boolean');
+  const validHistory = isRecordList(backup?.sosHistory, (item) => isText(item.createdAt)
+    && Number.isFinite(Date.parse(item.createdAt)) && (item.location === null || isLocation(item.location)));
+  const settings = backup?.settings;
+  const validSettings = isRecord(settings)
+    && Object.keys(defaultState.settings).filter((key) => typeof defaultState.settings[key] === 'boolean')
+      .every((key) => typeof settings[key] === 'boolean')
+    && Number.isInteger(settings.safeZoneRadius) && settings.safeZoneRadius >= 100 && settings.safeZoneRadius <= 2000
+    && (settings.safeZoneCenter === null || isLocation(settings.safeZoneCenter));
+
+  if (backup?.schemaVersion !== STORAGE_VERSION || !validProfile || !validMedicines || !validContacts || !validHistory || !validSettings) {
+    throw new Error('Invalid SecondYouth backup');
+  }
+  const { profile, medicines, contacts, sosHistory } = backup;
+  return normalizeState({ profile, medicines, contacts, settings, sosHistory });
 }

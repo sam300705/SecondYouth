@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  body { margin: 20px; font: 14px/1.5 system-ui, sans-serif; color: #123d2b; }
+  input { display: block; margin: 5px 0 16px; width: 100%; }
+  button { padding: 8px 14px; border: 0; border-radius: 8px; background: #176b4a; color: white; font: inherit; }
+</style>
+<label for="portrait">Dashboard portrait</label>
+<input id="portrait" type="file" accept="image/png,image/jpeg">
+<button id="create" type="button">Create editable screens</button>
+<script>
+  document.querySelector('#create').onclick = async () => {
+    const file = document.querySelector('#portrait').files[0];
+    const image = file ? Array.from(new Uint8Array(await file.arrayBuffer())) : null;
+    parent.postMessage({ pluginMessage: { image } }, '*');
+  };
+</script>

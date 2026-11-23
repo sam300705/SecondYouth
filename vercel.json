@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/care.mjs": {
+      "includeFiles": "server/db/care.sql"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/care/:path*", "destination": "/api/care?route=:path*" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "SecondYouth Design Kit",
+  "id": "1639380914505009164",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": { "allowedDomains": ["none"] }
+}

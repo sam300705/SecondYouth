@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  defaultState,
   emergencyMessage,
   getNextMedicine,
   haversineDistance,
   isValidPhone,
   loadState,
   normalizePhone,
+  parseBackup,
   saveState,
   STORAGE_KEY,
   todayKey,
@@ -61,4 +63,19 @@ test('recovers from malformed local state', () => {
   assert.equal(loadState().profile, null);
   assert.deepEqual(loadState().medicines, []);
   globalThis.window = previousWindow;
+});
+
+test('restores exported care data with a locked persisted session', () => {
+  const backup = {
+    ...defaultState,
+    profile: { name: 'Asha', phone: '+918252581619' },
+    session: { locked: false },
+    medicines: [{ id: 'test', name: 'Example', dose: '', time: '09:00', instructions: '', color: 'blue', shape: 'round', active: true, lastTakenDate: null }],
+  };
+  const restored = parseBackup(JSON.stringify(backup));
+  assert.deepEqual(restored.medicines, backup.medicines);
+  assert.deepEqual(restored.profile, backup.profile);
+  assert.equal(restored.session.locked, true);
+  assert.throws(() => parseBackup(JSON.stringify({ ...backup, medicines: [...backup.medicines, ...backup.medicines] })), /Invalid SecondYouth backup/);
+  assert.throws(() => parseBackup(JSON.stringify({ ...backup, contacts: [null] })), /Invalid SecondYouth backup/);
 });

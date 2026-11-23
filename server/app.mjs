@@ -8,7 +8,7 @@ const bearerToken = (request) => {
   return header.startsWith('Bearer ') ? header.slice(7) : null;
 };
 
-export function createApi({ config = getConfig(), authService = createAuthService({ ...config, secret: config.jwtSecret || 'development-only-change-me' }), aiGateway = createAiGateway({ provider: config.aiProvider, apiKey: config.openAiApiKey, baseUrl: config.openAiBaseUrl, model: config.openAiModel }), logger = console, clock = () => Date.now() } = {}) {
+export function createApi({ config = getConfig(), authService = createAuthService({ ...config, secret: config.jwtSecret || 'development-only-change-me' }), aiGateway = createAiGateway({ provider: config.aiProvider, apiKey: config.openAiApiKey, baseUrl: config.openAiBaseUrl, model: config.openAiModel }), care = null, logger = console, clock = () => Date.now() } = {}) {
   const assistantLimiter = createRateLimiter({ limit: 20, windowMs: 60_000, clock });
   const refreshLimiter = createRateLimiter({ limit: 10, windowMs: 60_000, clock });
 
@@ -16,6 +16,7 @@ export function createApi({ config = getConfig(), authService = createAuthServic
     const headers = new Headers(response.headers);
     applySecurityHeaders(headers, { allowOrigin: config.allowedOrigin });
     headers.set('x-request-id', id);
+    headers.set('cache-control', 'no-store');
     return new Response(response.body, { status: response.status, headers });
   };
 
@@ -31,6 +32,12 @@ export function createApi({ config = getConfig(), authService = createAuthServic
     const url = new URL(request.url);
     try {
       if (request.method === 'OPTIONS') return withHeaders(new Response(null, { status: 204 }), id);
+      if (url.pathname.startsWith('/api/care/')) {
+        const result = care
+          ? await care.handle(request, url.pathname)
+          : errorResponse(503, 'care_unavailable', 'Care sharing is unavailable on this server.', id);
+        return withHeaders(result, id);
+      }
       if (url.pathname === '/healthz' || url.pathname === '/api/v1/health') {
         return withHeaders(jsonResponse({ status: 'ok', service: 'secondyouth-api', time: new Date(clock()).toISOString() }, { requestId: id }), id);
       }

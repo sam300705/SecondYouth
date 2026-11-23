@@ -4,14 +4,36 @@ services:
       context: ../..
       dockerfile: infra/docker/Dockerfile
     ports:
-      - "8787:8787"
+      - "127.0.0.1:8787:8787"
     environment:
       NODE_ENV: development
       PORT: 8787
       ALLOWED_ORIGIN: http://localhost:4173
       REQUIRE_AUTH: "false"
+      CARE_DEMO: "true"
+      DATABASE_URL: postgres://secondyouth:secondyouth-demo@db:5432/secondyouth
+    depends_on:
+      db:
+        condition: service_healthy
     read_only: true
     tmpfs:
       - /tmp
     security_opt:
       - no-new-privileges:true
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: secondyouth
+      POSTGRES_PASSWORD: secondyouth-demo
+      POSTGRES_DB: secondyouth
+    volumes:
+      - care-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "secondyouth", "-d", "secondyouth"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  care-data:

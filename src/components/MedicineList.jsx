@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, Check, Clock, Pencil, Pill, Plus, Trash2, X } from 'lucide-react';
-import { formatMedicineTime, isMedicineTakenToday, makeId, todayKey } from '../lib/appStore.js';
+import { formatMedicineTime, isMedicineTakenToday, makeId } from '../lib/appStore.js';
 
 const emptyForm = { name: '', dose: '', time: '08:00', instructions: '', color: 'blue', shape: 'round' };
 
-export default function MedicineList({ medicines, onChange, onBack, notify }) {
+export default function MedicineList({ medicines, care, onChange, onBack, notify }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState('');
+  const [recording, setRecording] = useState(null);
 
   const sorted = useMemo(() => [...medicines].sort((a, b) => a.time.localeCompare(b.time)), [medicines]);
   const update = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
@@ -30,8 +31,15 @@ export default function MedicineList({ medicines, onChange, onBack, notify }) {
     close();
   };
 
-  const toggleTaken = (id) => {
-    onChange(medicines.map((medicine) => medicine.id === id ? { ...medicine, lastTakenDate: isMedicineTakenToday(medicine) ? null : todayKey() } : medicine));
+  const toggleTaken = async (medicine) => {
+    setRecording(medicine.id);
+    try {
+      await care.record(medicine, !isMedicineTakenToday(medicine));
+    } catch {
+      notify('Could not save this check-in on this device.', 'error');
+    } finally {
+      setRecording(null);
+    }
   };
 
   const remove = (medicine) => {
@@ -44,10 +52,12 @@ export default function MedicineList({ medicines, onChange, onBack, notify }) {
     <div className="page-stack">
       <header className="page-header"><button type="button" className="icon-button" onClick={onBack} aria-label="Back to home"><ArrowLeft /></button><div><p className="eyebrow">Daily schedule</p><h1>Medicines</h1></div><button type="button" className="icon-button primary-icon" onClick={openNew} aria-label="Add medicine"><Plus /></button></header>
       <div className="progress-card"><div><strong>{medicines.filter((medicine) => isMedicineTakenToday(medicine)).length} of {medicines.length}</strong><span>medicines taken today</span></div><div className="progress-track"><i style={{ width: `${medicines.length ? (medicines.filter((medicine) => isMedicineTakenToday(medicine)).length / medicines.length) * 100 : 0}%` }} /></div></div>
+      {care.syncProblem && <p role="status">{care.syncProblem}</p>}
       {!sorted.length ? <div className="empty-state"><div><Pill /></div><h2>No medicines yet</h2><p>Add the medicines you take each day. This demo stores your schedule on this device.</p><button type="button" className="primary-button" onClick={openNew}><Plus /> Add medicine</button></div> : (
         <div className="list-stack">{sorted.map((medicine) => {
           const taken = isMedicineTakenToday(medicine);
-          return <article className={`medicine-card ${taken ? 'is-taken' : ''}`} key={medicine.id}><button type="button" className={`take-button color-${medicine.color}`} onClick={() => toggleTaken(medicine.id)} aria-label={`${taken ? 'Mark as not taken' : 'Mark as taken'}: ${medicine.name}`}>{taken ? <Check /> : <Pill />}</button><div className="medicine-copy"><span>{formatMedicineTime(medicine.time)}</span><h2>{medicine.name}</h2><p>{[medicine.dose, medicine.instructions].filter(Boolean).join(' · ') || 'Daily medicine'}</p></div><div className="card-actions"><button type="button" onClick={() => openEdit(medicine)} aria-label={`Edit ${medicine.name}`}><Pencil /></button><button type="button" onClick={() => remove(medicine)} aria-label={`Delete ${medicine.name}`}><Trash2 /></button></div>{taken && <em>TAKEN TODAY</em>}</article>;
+          const checkin = care.latest.get(medicine.id);
+          return <article className={`medicine-card ${taken ? 'is-taken' : ''}`} key={medicine.id}><button type="button" className={`take-button color-${medicine.color}`} onClick={() => toggleTaken(medicine)} disabled={!care.ready || recording !== null} aria-label={`${taken ? 'Mark as not taken' : 'Mark as taken'}: ${medicine.name}`}>{taken ? <Check /> : <Pill />}</button><div className="medicine-copy"><span>{formatMedicineTime(medicine.time)}</span><h2>{medicine.name}</h2><p>{[medicine.dose, medicine.instructions].filter(Boolean).join(' · ') || 'Daily medicine'}</p></div><div className="card-actions"><button type="button" onClick={() => openEdit(medicine)} aria-label={`Edit ${medicine.name}`}><Pencil /></button><button type="button" onClick={() => remove(medicine)} aria-label={`Delete ${medicine.name}`}><Trash2 /></button></div>{taken && <em>TAKEN TODAY</em>}{checkin && <small>{checkin.acknowledged ? 'Synced' : checkin.scope ? 'Saved on this device · Awaiting sync' : 'Saved on this device'}</small>}</article>;
         })}</div>
       )}
 

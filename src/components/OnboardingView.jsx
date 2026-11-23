@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ArrowRight, HeartHandshake, ShieldCheck, Sparkles } from 'lucide-react';
+import BackupRestore from './BackupRestore.jsx';
 import { isValidPhone, makeId, normalizePhone } from '../lib/appStore.js';
 
-export default function OnboardingView({ onComplete }) {
+export default function OnboardingView({ onComplete, onRestore, notify }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ name: '', phone: '', contactName: '', contactPhone: '', relation: '' });
   const [errors, setErrors] = useState({});
@@ -50,6 +51,7 @@ export default function OnboardingView({ onComplete }) {
             <label className="field"><span>Your name</span><input autoFocus autoComplete="name" value={form.name} onChange={update('name')} placeholder="Example: Asha" />{errors.name && <small>{errors.name}</small>}</label>
             <label className="field"><span>Your phone number</span><input type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={update('phone')} placeholder="+91 98765 43210" />{errors.phone && <small>{errors.phone}</small>}</label>
             <button type="button" className="primary-button" onClick={next}>Continue <ArrowRight /></button>
+            <BackupRestore onRestore={onRestore} notify={notify} />
           </section>
         ) : (
           <form onSubmit={finish}>

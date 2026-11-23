@@ -48,3 +48,17 @@ test('API health and assistant routes return structured responses', async () => 
   assert.equal(assistant.status, 200);
   assert.match((await assistant.json()).text, /settings/i);
 });
+
+test('assistant returns local guidance when the configured provider fails', async () => {
+  const ai = createAiGateway({
+    provider: 'openai',
+    apiKey: 'test-key',
+    fetchImpl: async (_url, { signal }) => {
+      assert.ok(signal instanceof AbortSignal);
+      throw new Error('Provider unavailable');
+    },
+  });
+  const result = await ai.complete('How do I open settings?', { currentScreen: 'home', medicines: [] });
+  assert.equal(result.provider, 'local');
+  assert.match(result.text, /Settings/);
+});

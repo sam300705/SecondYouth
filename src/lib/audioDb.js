@@ -38,32 +38,36 @@ export async function listMemories() {
   }
 }
 
-export async function saveMemory(memory) {
+async function commitMemoryChange(change) {
   const database = await openDb();
   try {
     const transaction = database.transaction(STORE_NAME, 'readwrite');
-    await requestToPromise(transaction.objectStore(STORE_NAME).put(memory));
+    const committed = new Promise((resolve, reject) => {
+      transaction.oncomplete = resolve;
+      transaction.onabort = () => reject(transaction.error ?? new Error('Media storage transaction was aborted.'));
+    });
+    try {
+      change(transaction.objectStore(STORE_NAME));
+    } catch (error) {
+      transaction.abort();
+      await committed.catch(() => {});
+      throw error;
+    }
+    await committed;
   } finally {
     database.close();
   }
 }
 
-export async function deleteMemory(id) {
-  const database = await openDb();
-  try {
-    const transaction = database.transaction(STORE_NAME, 'readwrite');
-    await requestToPromise(transaction.objectStore(STORE_NAME).delete(id));
-  } finally {
-    database.close();
-  }
+export function saveMemory(memory) {
+  return commitMemoryChange((store) => store.put(memory));
 }
 
-export async function clearMemories() {
-  const database = await openDb();
-  try {
-    const transaction = database.transaction(STORE_NAME, 'readwrite');
-    await requestToPromise(transaction.objectStore(STORE_NAME).clear());
-  } finally {
-    database.close();
-  }
+export function deleteMemory(id) {
+  return commitMemoryChange((store) => store.delete(id));
+}
+
+export function clearMemories() {
+  if (!('indexedDB' in window)) return Promise.resolve();
+  return commitMemoryChange((store) => store.clear());
 }

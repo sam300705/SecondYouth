@@ -12,6 +12,7 @@ RUN addgroup -S secondyouth && adduser -S secondyouth -G secondyouth
 COPY --from=build --chown=secondyouth:secondyouth /app/package*.json ./
 COPY --from=build --chown=secondyouth:secondyouth /app/node_modules ./node_modules
 COPY --from=build --chown=secondyouth:secondyouth /app/server ./server
+COPY --from=build --chown=secondyouth:secondyouth /app/src/lib/localAssistant.js ./src/lib/localAssistant.js
 COPY --from=build --chown=secondyouth:secondyouth /app/dist ./dist
 USER secondyouth
 EXPOSE 8787

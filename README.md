@@ -15,7 +15,7 @@ SecondYouth is an accessible, offline-first senior-assistance product demo. It b
 - Real camera preview with clearly labeled sample recognition scenarios
 - Legacy Vault audio recording persisted in IndexedDB
 - Voice navigation where the Web Speech API is supported
-- Accessibility preferences, browser notifications, JSON export, deep links, and offline caching
+- Accessibility preferences, browser notifications, JSON backup and restore, deep links, and offline caching
 
 ## Privacy model
 
@@ -32,7 +32,7 @@ This architecture makes the demo fully usable without credentials, but it is not
 
 ## Technology
 
-- React 19 and Vite 5
+- React 19 and Vite 8
 - React Router dependency retained for future server-backed routing
 - Lucide React icons
 - Browser APIs: Geolocation, MediaDevices, MediaRecorder, Speech Recognition, Speech Synthesis, Notifications, IndexedDB, and Service Workers
@@ -40,7 +40,7 @@ This architecture makes the demo fully usable without credentials, but it is not
 ## Run locally
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -77,7 +77,7 @@ npm run api
 # API health: http://localhost:8787/healthz
 ```
 
-The frontend assistant never receives an AI provider key. It calls `/api/v1/assistant` and falls back to a clearly labeled unavailable state when the API cannot be reached. If a provider-backed assistant is enabled, configure `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and optionally `OPENAI_MODEL` and `OPENAI_BASE_URL`. The assistant is intentionally restricted: it does not diagnose, change medication plans, or silently contact emergency services.
+The dashboard assistant runs on the device, including offline. It does not send questions or medicine data to the API. Separate API integrations can use `/api/v1/assistant` with server-issued authentication in production. To enable the optional provider for those integrations, configure `AI_PROVIDER=openai`, `OPENAI_API_KEY`, and optionally `OPENAI_MODEL` and `OPENAI_BASE_URL`.
 
 The first deployment slice is intentionally a **modular monolith**, not premature microservices. `server/` contains the API boundary and security primitives; `src/` remains the offline-first product UI; `infra/docker/` contains the production image and local compose file; `infra/k8s/api.yaml` is a portable Kubernetes starting point; and `.github/workflows/ci.yml` runs the quality gate and container build on pushes and pull requests.
 
@@ -91,6 +91,26 @@ npm run check
 
 It runs ESLint, the existing domain tests, server security/API tests, and the production Vite build. The API process is also smoke-tested through `/healthz`. Docker and Kubernetes artifacts are included for deployment environments that provide those runtimes; if Docker is not installed locally, GitHub Actions performs the container build.
 
+## Build and serve the device-local app
+
+Run `npm run build`, then `npm run api` to serve the built dashboard and API from port 8787. For a production-mode launch, set `NODE_ENV=production` and inject `SECONDYOUTH_JWT_SECRET` through your deployment secret store. The Docker image includes both the dashboard and API. Terminate HTTPS at the deployment edge so browsers can use service workers, geolocation, camera, and microphone features.
+
+The first successful online load installs the versioned offline shell. The service worker caches the dashboard and its static assets. API responses stay out of the service-worker cache. Reminders depend on browser permissions and run while the app is open.
+
+Use **Export device data** in Settings and restore from the welcome screen or Settings. A restore replaces care data after confirmation. The JSON contains personal information and should be stored with care. Audio memories remain in browser storage.
+
+## Final-year project
+
+SecondYouth includes offline medicine check-ins, PostgreSQL sync, and revocable caregiver access. The project guide covers the two-browser demonstration, managed sign-in, and an evaluation protocol. [Final-year project guide](docs/final-year-project.md)
+
 ## Production prerequisites
 
-Before real user data is enabled, replace the in-memory refresh-token store with PostgreSQL or Redis-backed persistence, add a managed identity provider/passkey implementation, provision encrypted object storage, configure a durable notification provider, and complete privacy, threat-model, accessibility, and medical-safety review. The current offline demo remains the safe default when those services are not configured.
+Before onboarding real users, verify these release gates on the target deployment:
+
+| Capability | Release evidence |
+| --- | --- |
+| Identity and caregiver access | Managed sign-in and account recovery work end to end. Verify that caregiver access is limited to explicitly delegated profiles and can be revoked. |
+| Data durability | Use encrypted transactional storage and encrypted object storage for synced recordings. Verify access logging, export, deletion, conflict handling, and restore from backup. |
+| Reminders and emergency actions | Test delivery, retries, and duplicate handling with the selected providers. Verify call and message handoff on supported phones. Background location requires a separately tested native workflow. |
+| Camera and assistive use | Sample recognition is a demonstration. Any real medicine identification workflow requires human confirmation and clinical validation before release. |
+| Accessibility and operations | Test supported devices with screen readers, keyboard-only navigation, and zoom. Verify TLS, production monitoring, incident response, and privacy and medical-safety review. | The current offline demo remains the safe default when those services are not configured.
